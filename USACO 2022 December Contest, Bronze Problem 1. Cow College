@@ -1,0 +1,167 @@
+USACO 2022 December Contest, Bronze
+Problem 1. Cow College
+
+Solution:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+//change the long long to int if you need to save memory/time really badly
+typedef long long ll;
+
+//Comment this define when working on interactive problems
+#define endl "\n"
+#define sqrt(n) sqrt((long double) n)
+
+const ll MAXN = 5e5;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+//const ll MOD = 998244353;
+ll MOD;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+ll mod(ll num) {
+    return (num >= MOD ? num % MOD : num);
+}
+
+ll __gcd(ll a, ll b) {
+    if (b == 0) {
+        return a;
+    }
+    
+    if (a == 0) {
+        return b;
+    }
+    
+    if (a < b) {
+        swap(a, b);
+    }
+    
+    return __gcd(b, a % b);
+}
+
+ll __lcm(ll a, ll b) {
+    ll prod = a*b;
+    return prod/__gcd(a, b);
+}
+
+/*
+ 
+ll maxsearch(ll lo, ll hi)
+{
+    lo--;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo + 1)/2;
+ 
+        if (works(mid)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    
+    return lo;
+}
+ 
+ll minsearch(ll lo, ll hi)
+{
+    hi++;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo)/2;
+        if (works(mid)) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    
+    return lo;
+}
+ */
+
+//We will iterate over all the possible costs of the university. For each cost, we'll compute the #of cows who can pay the cost and multiply this amount with the current cost. If FJ makes more money this way, or if FJ make the same amount of money but can charge a smaller tuition, than update the best answer
+void solve(ll ca)
+{
+    ll n; cin >> n;
+    
+    ll c[n];
+    for (ll i = 0; i < n; i++) {
+        cin >> c[i];
+    }
+    
+    //Sort the cows
+    sort(c, c+n);
+    
+    pair<ll, ll> ans = {0, 0}; //optimal tuition, money FJ can make
+    for (ll cost = 0; cost <= 1000000; cost++) {
+        //Use binary search to compute the number of cows who can afford to pay the current cost
+        ll ind = lower_bound(c, c+n, cost) - c;
+        
+        ll tcost = cost * (n - ind);
+        if ((ans.second < tcost) || (ans.second == tcost && cost < ans.first)) {
+            ans.first = cost;
+            ans.second = tcost;
+        }
+    }
+    
+    cout << ans.second << " " << ans.first << endl;
+    
+    return;
+}
+
+int main()
+{
+    //mt19937 rng(0);
+    
+    //Fast IO
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    /*
+    freopen("wormsort.in", "r", stdin);
+    freopen("wormsort.out", "w", stdout);
+    */
+    
+    ll t = 1;
+    //cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
