@@ -189,7 +189,7 @@ void solve(ll ca)
                 found = true; fail = false; //found is true since we have found a solution, fail = false since we found a variable with no contradictions
                 break;
             } else if ((__10+__00)>0 && __11==0 && __01==0) { //In this case, all the remaining inputs all share 1 output, so we can utilize our else statement and have verified that a program exists.
-                found = true; fail = false; /found is true since we have found a solution, fail = false since we found a variable with no contradictions
+                found = true; fail = false; //found is true since we have found a solution, fail = false since we found a variable with no contradictions
                 break;
             } else { //The current variable we found can't currently be utilized in an if statement. Move on
                 continue;
