@@ -1,0 +1,249 @@
+USACO 2022 December Contest, Bronze
+Problem 3. Reverse Engineering
+
+Code:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+//change the long long to int if you need to save memory/time really badly
+typedef long long ll;
+
+//Comment this define when working on interactive problems
+#define endl "\n"
+#define sqrt(n) sqrt((long double) n)
+
+const ll MAXN = 5e5;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+//const ll MOD = 998244353;
+ll MOD;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+ll mod(ll num) {
+    return (num >= MOD ? num % MOD : num);
+}
+
+ll __gcd(ll a, ll b) {
+    if (b == 0) {
+        return a;
+    }
+    
+    if (a == 0) {
+        return b;
+    }
+    
+    if (a < b) {
+        swap(a, b);
+    }
+    
+    return __gcd(b, a % b);
+}
+
+ll __lcm(ll a, ll b) {
+    ll prod = a*b;
+    return prod/__gcd(a, b);
+}
+
+/*
+ 
+ll maxsearch(ll lo, ll hi)
+{
+    lo--;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo + 1)/2;
+ 
+        if (works(mid)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    
+    return lo;
+}
+ 
+ll minsearch(ll lo, ll hi)
+{
+    hi++;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo)/2;
+        if (works(mid)) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    
+    return lo;
+}
+ */
+
+//Observation: Each variable will be in at most 1 if/else if statement. If a variable was in 2 if/else if statements, then the second statement would either be redundant, or would be functionally equivalent to an else statement.
+
+//Algorithm: We will keep looking for a variable/position that we can make an if/else if statement for. In addition, we also need to hunt for an else statement to finish everything off
+
+void solve(ll ca)
+{
+    ll n, m; cin >> n >> m;
+    
+    pair<string, ll> inputs[m];
+    
+    for (ll i = 0; i < m; i++) {
+        cin >> inputs[i].first >> inputs[i].second;
+    }
+    
+    //done[i] is true if the ith input has already been processed through an if statement.
+    vector<bool> done(m, false);
+    
+    while (true) {
+        //found will return true if we found a variable that can be used in an else statement.
+        bool found = false; bool fail = true; //fail will be true if all of the variables we found have some contradictions that prevent us from using them in if statements
+        
+        //Iterate over each possible variable.
+        for (ll var = 0; var < n; var++) {
+            //__10 will count the #of times that the var variable in each input is a 1 and the ouput for that input is 0. __01, __11, and __00 are all defined similarily
+            ll __10 = 0, __01 = 0, __11 = 0, __00 = 0;
+            
+            //Iterate over all the m inputs
+            for (ll i = 0; i < m; i++) {
+                //If this input has been processed, ignore it
+                if (done[i]) {
+                    continue;
+                }
+                    
+                //Update our values of __00, __01, __10, __11
+                if (inputs[i].first[var] == '1') {
+                    if (inputs[i].second == 1) {
+                        __11++;
+                    } else {
+                        __10++;
+                    }
+                } else {
+                    if (inputs[i].second == 1) {
+                        __01++;
+                    } else {
+                        __00++;
+                    }
+                }
+            }
+
+            //In this first case, the current variable we're looking at has something in common across all the remaining inputs. If the var variable in any of the remaining inputs is 1, then all those inputs are guaranteed to share the same output. This means that we can get rid of all the inputs that have a 1 as their var variable and we can mark them as done.
+            if ((__11>0 && __10==0) || (__10>0 && __11==0)) {
+                for (ll i = 0; i < m; i++) {
+                    if (done[i]) {
+                        continue;
+                    }
+                    if (inputs[i].first[var] == '1') {
+                        done[i] = true;
+                    }
+                }
+                fail = false; //set fail to false since we found a variable with no contradictions
+                break;
+            } else if ((__00>0 && __01==0) ||(__01>0 && __00==0)) { //This is the same case as the above, but for 0
+                for (ll i = 0; i < m; i++) {
+                    if (done[i]) {
+                        continue;
+                    }
+                    if (inputs[i].first[var] == '0') {
+                        done[i] = true;
+                    }
+                }
+                fail = false;
+                break;
+            } else if ((__11+__01)>0 && __10==0 && __00==0) { //In this case, all the remaining inputs all share 1 output, so we can utilize our else statement and have verified that a program exists
+                found = true; fail = false; //found is true since we have found a solution, fail = false since we found a variable with no contradictions
+                break;
+            } else if ((__10+__00)>0 && __11==0 && __01==0) { //In this case, all the remaining inputs all share 1 output, so we can utilize our else statement and have verified that a program exists.
+                found = true; fail = false; /found is true since we have found a solution, fail = false since we found a variable with no contradictions
+                break;
+            } else { //The current variable we found can't currently be utilized in an if statement. Move on
+                continue;
+            }
+        }
+        
+        ll cnt = 0;
+        for (ll i = 0; i < m; i++) {
+            if (done[i]) {
+                cnt++;
+            }
+        }
+        
+        //If all the inputs have been processed, then we have found a solution
+        if (cnt == m) {
+            fail = false;
+            found = true;
+        }
+        
+        //If all of the variables we looked at led to contradictions, no solution is possible
+        if (fail) {
+            cout << "LIE" << endl;
+            return;
+        }
+        
+        //We have found a solution
+        if (found) {
+            cout << "OK" << endl;
+            return;
+        }
+    }
+    
+    return;
+}
+
+int main()
+{
+    //mt19937 rng(0);
+    
+    //Fast IO
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    /*
+    freopen("wormsort.in", "r", stdin);
+    freopen("wormsort.out", "w", stdout);
+    */
+    
+    ll t = 1;
+    cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
