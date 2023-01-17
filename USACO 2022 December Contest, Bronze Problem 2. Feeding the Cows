@@ -1,0 +1,263 @@
+USACO 2022 December Contest, Bronze
+Problem 2. Feeding the Cows
+
+Code:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+//change the long long to int if you need to save memory/time really badly
+typedef long long ll;
+
+//Comment this define when working on interactive problems
+#define endl "\n"
+#define sqrt(n) sqrt((long double) n)
+
+const ll MAXN = 5e5;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+//const ll MOD = 998244353;
+ll MOD;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+ll mod(ll num) {
+    return (num >= MOD ? num % MOD : num);
+}
+
+ll __gcd(ll a, ll b) {
+    if (b == 0) {
+        return a;
+    }
+    
+    if (a == 0) {
+        return b;
+    }
+    
+    if (a < b) {
+        swap(a, b);
+    }
+    
+    return __gcd(b, a % b);
+}
+
+ll __lcm(ll a, ll b) {
+    ll prod = a*b;
+    return prod/__gcd(a, b);
+}
+
+/*
+ 
+ll maxsearch(ll lo, ll hi)
+{
+    lo--;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo + 1)/2;
+ 
+        if (works(mid)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    
+    return lo;
+}
+ 
+ll minsearch(ll lo, ll hi)
+{
+    hi++;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo)/2;
+        if (works(mid)) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    
+    return lo;
+}
+ */
+
+//Observation: Since each patch will feed all cows that have a distance of at most k from it, it effectively forms an interval of length 2*k + 1 positions.
+//Observation: The smallest number of moves needed is the # of intervals of 2*k + 1 needed in order to feed all the H and G cows.
+//We can store all the locations of the H cows. Then we'll greedly start an interval of length 2*k + 1 at the first H cow. We'll start the next interval after a couple of positions until we reach a new H cow that wasn't reached by the previous interval. Do this for all the G cows as well, and the # of intervals we used is the minimum # of patches we'll need
+
+//Observation: Since each interval will have a length of 2*k + 1 and since every interval will be unique, we can place an appropriate patch at the center of each interval.
+//Observation: There is an edge case, in which some intervals extend past the nth position. We can show that there will be at most 2 such intervals that extend past the nth position, an H interval, and a G interval. We will handle the placing of patches for these extra intervals in a special way.
+
+void solve(ll ca)
+{
+    ll n, k;
+    cin >> n >> k;
+    
+    ll rad = 2*k + 1; //The length of an interval
+    
+    string s; cin >> s;
+    
+    //Get the locations of the H cows and the G cows
+    vector<ll> h, g;
+    for (ll i = 0; i < n; i++) {
+        if (s[i] == 'H') {
+            h.push_back(i);
+        } else {
+            g.push_back(i);
+        }
+    }
+    
+    vector<char> ans(n, '.'); //Will store our constructed answer
+    ll ans2 = 0; //Will store a count of all the intervals we use
+    
+    vector<ll> starth; //Will store the starting position for each intervala
+    for (ll i = 0; i < h.size();) {
+        //If we arrive at this H cow, that means it wasn't reached by any previous intervals, so we'll increment our count by 1 and add this position to our list of starting H cows for each interval
+        ans2++;
+        starth.push_back(h[i]);
+        
+        //Move past all the H cows that will be covered by this interval
+        ll ti = i;
+        while (ti < h.size() && h[ti] <= h[i]+rad-1) {
+            ti++;
+        }
+        i = ti;
+    }
+    
+    //Do the same process as described above for the G cows
+    vector<ll> startg;
+    for (ll i = 0; i < g.size();) {
+        ans2++;
+        startg.push_back(g[i]);
+        ll ti = i;
+        while (ti < g.size() && g[ti] <= g[i]+rad-1) {
+            ti++;
+        }
+        i = ti;
+    }
+
+    ll extrah = -1; ll extrag = -1; //extrah will be -1 if no H intervals extend past the nth position, or it will store the left position of an H interval that extends past the nth position. extrag stores the same information but for G intervals.
+    
+    //Check each H interval. If it stays inside the boundaries, place a patch in its center. Otherwise, it's the special H interval that stretches past the nth position
+    for (ll i = 0; i < starth.size(); i++) {
+        if (starth[i]+rad-1 < n) {
+            ans[starth[i]+k] = 'H';
+        } else {
+            extrah = starth[i];
+        }
+    }
+    
+    //Check each G interval. If it stays inside the boundaries, place a patch in its center. Otherwise it's the special G interval that stretches past the nth position
+    for (ll i = 0; i < startg.size(); i++) {
+        if (startg[i]+rad-1 < n) {
+            ans[startg[i]+k] = 'G';
+        } else {
+            extrag = startg[i];
+        }
+    }
+    
+    //If no extra intervals exist, do nothing
+    if (extrah == -1 && extrag == -1) {
+        //
+    } else if (extrah == -1) { //If only a G extra interval exists,
+        //The position we place the pasture at must be the minimum of the last position or the center of the interval if the center is in the boundaries. We can guarantee that the last position will be empty, bc if it wasn't empty, then it must have been an extra interval that used it. This is a contradiction, b/c only the current G interval is an extra interval.
+        ll ind = min(n-1, extrag+k);
+        ans[ind] = 'G';
+    } else if (extrag == -1) { //Same logic as the previous case, but for an H extra interval
+        ll ind = min(n-1, extrah+k);
+        ans[ind] = 'H';
+    } else {
+        //If the H interval came first, we'll iterate from left to right and look for the first position that will cover the H interval. Then do the same for the G interval.
+        //If the G interval came first, do the same thing as with the H interval coming first, but check the G interval before the H interval
+        if (extrah < extrag) {
+            for (ll i = extrah; i < n; i++) {
+                if (ans[i] == '.' && i-k <= extrah && i+k >= n-1) {
+                    ans[i] = 'H';
+                    break;
+                }
+            }
+            for (ll i = extrag; i < n; i++) {
+                if (ans[i] == '.' && i-k <= extrag && i+k >= n-1) {
+                    ans[i] = 'G';
+                    break;
+                }
+            }
+        } else {
+            for (ll i = extrag; i < n; i++) {
+                if (ans[i] == '.' && i-k <= extrag && i+k >= n-1) {
+                    ans[i] = 'G';
+                    break;
+                }
+            }
+            for (ll i = extrah; i < n; i++) {
+                if (ans[i] == '.' && i-k <= extrah && i+k >= n-1) {
+                    ans[i] = 'H';
+                    break;
+                }
+            }
+        }
+    }
+    
+    cout << ans2 << endl;
+    for (ll i = 0; i < n; i++) {
+        cout << ans[i];
+    }
+    cout << endl;
+    
+    return;
+}
+
+int main()
+{
+    //mt19937 rng(0);
+    
+    //Fast IO
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    /*
+    freopen("wormsort.in", "r", stdin);
+    freopen("wormsort.out", "w", stdout);
+    */
+    
+    ll t = 1;
+    cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
