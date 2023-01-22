@@ -1,0 +1,258 @@
+USACO 2022 December Contest, Silver
+Problem 1. Barn Tree
+
+Code:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+//change the long long to int if you need to save memory/time really badly
+typedef long long ll;
+
+//Comment this define when working on interactive problems
+#define endl "\n"
+#define sqrt(n) sqrt((long double) n)
+
+const ll MAXN = 5e5 + 5;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+const ll MOD = 1e9 + 7;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+ll mod(ll num) {
+    return (num >= MOD ? num % MOD : num);
+}
+
+ll __gcd(ll a, ll b) {
+    if (b == 0) {
+        return a;
+    }
+    
+    if (a == 0) {
+        return b;
+    }
+    
+    if (a < b) {
+        swap(a, b);
+    }
+    
+    return __gcd(b, a % b);
+}
+
+ll __lcm(ll a, ll b) {
+    ll prod = a*b;
+    return prod/__gcd(a, b);
+}
+
+/*
+ 
+ll maxsearch(ll lo, ll hi)
+{
+    lo--;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo + 1)/2;
+ 
+        if (works(mid)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    
+    return lo;
+}
+ 
+ll minsearch(ll lo, ll hi)
+{
+    hi++;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo)/2;
+        if (works(mid)) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    
+    return lo;
+}
+ */
+
+//Input
+ll n;
+ll h[MAXN];
+
+//Ideal stores the #of haybales each barn will need in order for every barn to have an equal #of haybales
+ll ideal, ans; //ans will store the #of orders needed
+
+//orders will be a list of orderrs
+vector<vector<ll>> orders;
+
+//stores the graph
+vector<ll> adj[MAXN];
+
+//The dp array
+ll dp[MAXN];
+
+//Compute the dp array
+ll dfs(ll node, ll par) {
+    ll ret = 0;
+    for (auto el: adj[node]) {
+        if (el == par) {
+            continue;
+        }
+        
+        dp[el] = dfs(el, node);
+        ret += dp[el];
+    }
+    ret += (h[node] - ideal);
+    
+    return ret;
+}
+
+void dfs3(ll node, ll par) {
+    for (auto el: adj[node]) {
+        if (el == par) {
+            continue;
+        }
+        
+        //If the current child's dp value is negative, then it wasn't fixed before and needs to be fixed now
+        if (dp[el] < 0) {
+            //Move the minimum needed haybales to the child
+            h[node] += dp[el];
+            h[el] -= dp[el];
+            
+            //Update the orders
+            ans++;
+            vector<ll> temp(3); temp[0] = node+1; temp[1] = el+1; temp[2] = -1*dp[el];
+            orders.push_back(temp);
+            
+            //dfs to the child
+            dfs3(el, node);
+        }
+    }
+}
+
+void dfs2(ll node, ll par) {
+    for (auto el: adj[node]) {
+        if (el == par) {
+            continue;
+        }
+        dfs2(el, node);
+    }
+    
+    //If the current subtree can be fixed, . . .
+    if (dp[node] >= 0) {
+        //fix the current subtree
+        dfs3(node, par);
+        
+        //If we have any extra haybales, move them up since we have already finished dealing with the current subtree
+        ll extra = h[node] - ideal;
+        if (extra > 0) {
+            ans++;
+            vector<ll> temp(3); temp[0] = node+1; temp[1] = par+1; temp[2] = extra;
+            orders.push_back(temp);
+            h[node]-=extra;
+            h[par]+=extra;
+        }
+    }
+}
+
+//Observation: If there are a total of k haybales in the graph, then each barn must need k/n haybales.
+//Idea: Let's let dp[i] be equal to difference between the #of haybales in the subtree and the ideal #of haybales needed in the subtree
+//We can compute the dp array easily in O(n)
+
+//Algorithm: Start from the leaves of the tree and go up. If the current subtree needs more haybales, it's optimal to leave it as it is and move on. Otherwise if it has enough haybales, it's optimal to try to fix it. Once the subtree has been fixed, move the remaining haybales back up.
+
+//Algorithm: In order to fix a subtree, we'll start at the root of the subtree, and check each of its children. If the dp value of child k is greater than or equal to 0, its subtree must have already been fixed in a previous dfs, so we ignore it. Only do a dfs to children whose dp value is -1. Once you've identified the appropriate children to dfs to, update the orders and move the minimum needed haybales to each child.
+
+void solve(ll ca)
+{
+    //Read in the input
+    cin >> n;
+    
+    ll sum = 0;
+    for (ll i = 0; i < n; i++) {
+        cin >> h[i];
+        sum += h[i];
+    }
+    
+    ideal = sum/n; //Compute the ideal number of haybales for each barn
+    
+    for (ll i = 0; i < n-1; i++) {
+        ll u, v;
+        cin >> u >> v;
+        adj[u-1].push_back(v-1);
+        adj[v-1].push_back(u-1);
+    }
+    
+    //Compute dp
+    dp[0] = dfs(0, -1);
+    
+    ans = 0;
+    dfs2(0, -1);
+    
+    cout << ans << endl;
+    for (auto el: orders) {
+        cout << el[0] << " " << el[1] << " " << el[2] << endl;
+    }
+    
+    return;
+}
+
+int main()
+{
+    //mt19937 rng(0);
+    
+    //Fast IO
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    /*
+    freopen("perimeter.in", "r", stdin);
+    freopen("perimeter.out", "w", stdout);
+    */
+    
+    ll t = 1;
+    //cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
