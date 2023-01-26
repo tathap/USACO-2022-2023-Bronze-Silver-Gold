@@ -1,0 +1,214 @@
+USACO 2022 December Contest, Silver
+Problem 2. Circular Barn
+
+Code:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+//change the long long to int if you need to save memory/time really badly
+typedef long long ll;
+
+//Comment this define when working on interactive problems
+#define endl "\n"
+#define sqrt(n) sqrt((long double) n)
+
+const ll MAXN = 6e6 + 5;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+const ll MOD = 1e9 + 7;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+ll mod(ll num) {
+    return (num >= MOD ? num % MOD : num);
+}
+
+ll __gcd(ll a, ll b) {
+    if (b == 0) {
+        return a;
+    }
+    
+    if (a == 0) {
+        return b;
+    }
+    
+    if (a < b) {
+        swap(a, b);
+    }
+    
+    return __gcd(b, a % b);
+}
+
+ll __lcm(ll a, ll b) {
+    ll prod = a*b;
+    return prod/__gcd(a, b);
+}
+
+/*
+ 
+ll maxsearch(ll lo, ll hi)
+{
+    lo--;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo + 1)/2;
+ 
+        if (works(mid)) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    
+    return lo;
+}
+ 
+ll minsearch(ll lo, ll hi)
+{
+    hi++;
+    while (lo < hi) {
+        ll mid = lo + (hi - lo)/2;
+        if (works(mid)) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+    
+    return lo;
+}
+ */
+
+bool isPrime[MAXN + 10];
+vector <ll> primes[4];
+
+void Sieve()
+{
+    isPrime[0] = false;
+
+    for (ll i = 1; i <= MAXN; i++) {
+        isPrime[i] = true;
+    }
+    
+    primes[1].push_back(1);
+        
+    for (ll i = 2; i <= MAXN; i++) {
+        if (isPrime[i]) {
+            primes[i%4].push_back(i);
+            for (ll j = i; j <= MAXN; j += i) {
+                isPrime[j] = false;
+            }
+        }
+    }
+}
+
+//Algorithm: Let's try to count the optimal number of turns needed for a farmer to win any room. Once we've calculated the optimal number of moves needed to win a room, we can convert the #of turns used to the #of times a room was visited. Once we know the #of times a room was visited and who will win each room, we can iterate from room 1 to room n, and pick the room with the smallest # of visits that appears as early as possible. The winner of that room will win the whole game.
+
+//In order to check which farmer will win room i, draw some cases out on a piece of paper. It turns out that Farmer John will win in room i as long as a[i] % 4 != 0. Farmer Nhoj will win as long as a[i] % 4 == 0. Let's do case 2 first. If a[i] % 4 == 0, then Farmer Nhoj will win room i. Since Farmer John wants to postpone his inevitable defeat, it's optimal for him to decrease the # of cows by 2. Farmer Nhoj has no choice but to decrease the # of cows by 2 again to get back to a winning state. Therefore it will take a[i]/2 moves to reach 0, but we need to add 1 b/c that extra move will be the move where Farmer John arrives at a room with no cows and looses that room.
+
+//Now let's solve Case 1. Let a[i] % 4 = k where k != 0. Then Farmer John wants to force Farmer Nhoj into a loosing state. He does this by forcing Nhoj to start when the #of cows is divisible by 4. In order to do this, Farmer John will need to find the largest value p such that p <= a[i] and p % 4 = k. Once we find this value of p, Farmer Nhoj will subtract by 2 to postpone his inevitable defeat. Now we have the same case as case 2. The # of moves required in this case are 1 for the initial subtraction of p, (a[i]-p)/2 for Farmer Nhoj trying to postpone his inevitable defeat and Farmer John thus being forced to subtract by 2 to get back to a winning state, and an extra 1 for the final move where Farmer Nhoj arrives at a room with no cow and looses that room.
+
+//To find the largest value p <= num1 && p%4 == num2, we'll run a Sieve at the beginning of the problem. We'll store 4 vectors of primes. primes[i] will give us a list of all prime numbers with a modulo-4 residue of i. Then we can use binary search on one of the 4 arrays to find the appropriate p.
+
+//Now that we know that some room will be completed in k turns, the number of visits to that room will be ceil(k/2).
+void solve(ll ca)
+{
+    ll n; cin >> n;
+    ll a[n];
+    
+    //cnt[i] is the #of turns needed in the current room for a farmer to win assuming both play optimally
+    //winner[i] is true if Fj wins room i and false otherwise.
+    ll cnt[n]; bool winner[n];
+    for (ll i = 0; i < n; i++) {
+        cin >> a[i];
+        //Case 2
+        if (a[i]%4 == 0) {
+            winner[i] = false;
+            cnt[i] = 1 + a[i]/2;
+        } else { //Case 1
+            winner[i] = true;
+            ll ind = upper_bound(primes[a[i]%4].begin(), primes[a[i]%4].end(), a[i]) - primes[a[i]%4].begin();
+            ind--;
+            
+            ll newnum = a[i] - primes[a[i]%4][ind];
+            cnt[i] = 2 + newnum/2;
+        }
+        
+        //The number of visits to the room is equal to ceil(cnt[i]/2).
+        cnt[i] = (cnt[i]+1)/2;
+    }
+    
+    //Find best room
+    ll smallest = INF; bool winn = true;
+    for (ll i = 0; i < n; i++) {
+        if (cnt[i] < smallest) {
+            smallest = cnt[i];
+            winn = winner[i];
+        }
+    }
+    
+    if (winn) {
+        cout << "Farmer John" << endl;
+    } else {
+        cout << "Farmer Nhoj" << endl;
+    }
+}
+
+int main()
+{
+    //mt19937 rng(0);
+    
+    //Fast IO
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    /*
+    freopen("perimeter.in", "r", stdin);
+    freopen("perimeter.out", "w", stdout);
+    */
+    
+    //Run a Sieve to get all the prime numbers we need
+    Sieve();
+    
+    ll t = 1;
+    cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
