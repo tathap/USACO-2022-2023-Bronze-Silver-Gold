@@ -126,7 +126,7 @@ void solve(ll ca)
     
     //Run a BFS
     while (bfs.size() > 0) {
-        ll cur = bfs.top();
+        ll cur = bfs.front();
         bfs.pop();
         
         //If the current node is the end of a chain, leave
