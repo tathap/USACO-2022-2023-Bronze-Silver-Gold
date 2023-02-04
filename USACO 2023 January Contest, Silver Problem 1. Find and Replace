@@ -1,0 +1,240 @@
+USACO 2023 January Contest, Silver
+Problem 1. Find and Replace
+
+Code:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+typedef long long ll;
+
+const ll MAXN = 1e5 + 5;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+const ll MOD = 1e9 + 7;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+//Given a character, compute the integer index we want to map it to.
+ll conver(char c) {
+    ll ret;
+    if (c >= 'a' && c <= 'z') {
+        ret = c - 'a';
+    } else {
+        ret = c - 'A';
+        ret += 26;
+    }
+    
+    return ret;
+}
+
+//Observation: Let's create a graph where the nodes are character types. We can let a directed edge connect node a to node b iff there is some position in the grid such that s1[i] = a and s2[i] = b. For implementation simplicity, we can convert each distinct character type to a distinct integer in the range [0, 52).
+//Observation2: If a node a has an outdegree > 1, then it's impossible for their to be a solution, since all the instances of color a in the first string will always be guaranteed to all share the same color.
+//Observation3: Note that the graph will consist of chains (a group of nodes connected to each other, with the final node having an outdegree of 0) or chains connected to cycles. If our graph didn't have any cycles of length > 1, then the answer would simply be the #of edges - the # of self-loops (Play around with examples to see why this is the case).
+//Observation4: If a cycle exists in a graph, then it turns out that in order to solve the cycle, we need to find an outside node that isn't in any cycle. (Once again, look at examples to prove this to yourself). If it's impossible to find such a node, no answer exists. Otherwise, there are 2 cases. Case 1: We pick some node that hasn't been used, or isn't directly connected to your cycle as the end of a chain. Note that this node can't be in any cycles of course. The answer in this case is that we need to add the length of the cycle plus 1 to our answer b/c we will need to convert one node to our placeholder node to break the cycle. Case 2: We pick some node that is directly connected to our cycle as the end of a chain. The answer in this case is that we only need to add the length of the cycle to our answer.
+//Example for Case 2:
+/*
+ Example input:
+    ABC
+    BAB
+ 
+ The graph looks like A -> B <- C
+                        <-
+ If we convert A into C, we get:
+ CBC
+ BAB
+ The cycle has been broken here and the #of moves needed is 2. So the total #of moves needed is 3. However, since we got to handle node C for free (it wasn't in the cycle), this actually only added a net of 2 moves to our answer, making this very efficient
+ */
+
+//Algorithm: Basically create a graph between character types where character c1 has a directed edge to c2 if c1 is in the input string and wants to reach c2 in the output string. Observe that each node (a distinct character type) must have an outdegree of at most 1. Otherwise, there's no way to do it. Once you know that the graph is valid, note that the answer is simply the #of edges (not including self-loops) assuming there are no cycles (not including self-loops). If there are cycles, that complicates the solution a little bit. It turns out you'll need to turn one node in the cycle into another character. If any node in the cycle has a child, it's optimal to increase the answer by the length of the cycle, since there's guaranteed to be a valid construction. Otherwise if there's another node that isn't part of any cycle, we can use that and increase the answer by the length of the cycle + 1. Otherwise, it's impossible to fix the cycle.
+
+void solve(ll ca)
+{
+    string s1, s2;
+    cin >> s1 >> s2;
+    
+    ll par[52]; //compute the goal of each character
+    set<ll> checkma[52]; //will store the #of distinct nodes who node[i] has an out-going edge to
+    set<ll> child[52]; //stores the nodes that enter node i
+    set<ll> child2[52]; //Same as child2, but will be saved for later use
+    
+    //initialize par
+    for (ll i = 0; i < 52; i++) {
+        par[i] = -1;
+    }
+    
+    //Read in the input and update the graph
+    for (ll i = 0; i < s1.length(); i++) {
+        par[conver(s1[i])] = conver(s2[i]);
+        checkma[conver(s1[i])].insert(conver(s2[i]));
+        child[conver(s2[i])].insert(conver(s1[i]));
+        child2[conver(s2[i])].insert(conver(s1[i]));
+    }
+        
+    //If a node has an outdegree > 1, then no solution exists
+    for (ll i = 0; i < 52; i++) {
+        if (checkma[i].size() > 1) {
+            cout << -1 << endl;
+            return;
+        }
+    }
+    
+    //We will use a Khan's Algorithm like approach to get rid of all the chains so that we can handle the cycles. We can update the answer by the #of edges in the chain.
+    
+    //Put all the nodes with an indegree of 0 but an outdegree of 1 into the queue. These will serve as our initial leaf nodes
+    queue<ll> bfs;
+    for (ll i = 0; i < 52; i++) {
+        if (child[i].size() == 0 && par[i] != -1) {
+            bfs.push(i);
+        }
+    }
+    
+    //Stores the answer
+    ll ans = 0;
+    
+    //Run a BFS
+    while (bfs.size() > 0) {
+        ll cur = bfs.top();
+        bfs.pop();
+        
+        //If the current node is the end of a chain, leave
+        if (par[cur] == -1) {
+            continue;
+        }
+        
+        //Update the answer, update the children of the parent, and add the parent to the queue if it doesn't have any kids anymore
+        ans++;
+        child[par[cur]].erase(cur);
+        if (child[par[cur]].size() == 0) {
+            bfs.push(par[cur]);
+        }
+    }
+     
+    //stores the cycles
+    vector<vector<ll>> cycles;
+    
+    //stores wether a node has been seen in a cycle
+    bool visited[52];
+    for (ll i = 0; i < 52; i++) {
+        visited[i] = false;
+    }
+    
+    for (ll i = 0; i < 52; i++) {
+        //If the current node was already traversed in a previous cycle, or if it's not part of a cycle, ignore it
+        if (visited[i]) {
+            continue;
+        }
+        
+        if (child[i].size() == 0) {
+            continue;
+        }
+        
+        //Get the cycle with a while loop
+        vector<ll> tem;
+        ll cur = i;
+        while (child[cur].size() == 1) {
+            if (!visited[cur]) {
+                visited[cur] = true;
+                tem.push_back(cur);
+                cur = par[cur];
+                if (par[cur] == -1) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        //Add our cycle to our list of cycles
+        cycles.push_back(tem);
+    }
+    
+    //found is true if some node exists that isn't in a cycle, or wasn't used at all.
+    bool found = false;
+    for (ll i = 0; i < 52; i++) {
+        if (!visited[i]) {
+            found = true;
+            break;
+        }
+    }
+    
+    //Iterate over all cycles and update the answer
+    for (auto el: cycles) {
+        //If the cycle is a self-loop, ignore it
+        if (el.size() == 1) {
+            continue;
+        }
+        
+        //found2 will be set to true if we find a node that connects directly into the current cycle but isn't part of the cycle. We can use child2 since we kept this information from the input without damaging it like we did with child
+        bool found2 = false;
+        for (auto el2: el) {
+            if (child2[el2].size() > 1) {
+                found2 = true;
+                break;
+            }
+        }
+        
+        //If we've found a node that connects directly into the cycle but isn't part of it, then update the answer by the length of the cycle
+        if (found2) {
+            ans += el.size();
+        } else if (found) { //Otherwise if another node can be used as a placeholder, update the answer by the length of the cycle + 1
+            ans += (el.size()+1);
+        } else { //Otherwise, no solution exists
+            cout << -1 << endl;
+            return;
+        }
+    }
+    
+    //Print the answer
+    cout << ans << endl;
+    
+    return;
+}
+
+
+int main()
+{
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    
+    ll t = 1;
+    cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
