@@ -1,0 +1,213 @@
+USACO 2023 January Contest, Silver
+Problem 2. Following Directions
+
+Code:
+//Always write your algorithm down on a piece of paper and question EACH and EVERY step if you aren't able to find an implementation mistake in your code.
+
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <math.h>
+#include <set>
+#include <map>
+#include <string>
+#include <tuple>
+#include <numeric>
+#include <climits>
+#include <bitset>
+#include <iomanip>
+#include <random>
+#include <ctime>
+
+using namespace std;
+
+//change the long long to int if you need to save memory/time really badly
+typedef long long ll;
+
+//Comment this define when working on interactive problems
+#define endl "\n"
+#define sqrt(n) sqrt((long double) n)
+
+const ll MAXN = 1501;
+const ll ZER = 0;
+const ll ONE = 1;
+const ll INF = LLONG_MAX;
+const ll MOD = 1e9 + 7;
+
+ll min(ll a, ll b) {
+    if (a < b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+ 
+ll max(ll a, ll b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+ll mod(ll num) {
+    return (num >= MOD ? num % MOD : num);
+}
+
+ll __gcd(ll a, ll b) {
+    if (b == 0) {
+        return a;
+    }
+    
+    if (a == 0) {
+        return b;
+    }
+    
+    if (a < b) {
+        swap(a, b);
+    }
+    
+    return __gcd(b, a % b);
+}
+
+ll __lcm(ll a, ll b) {
+    ll prod = a*b;
+    return prod/__gcd(a, b);
+}
+
+//Observation 1: Note that if we know k cows arrive at cell (i, j), then if the fence post at cell (i, j) changes, only k cows will have their destinations changed.
+//Observation 2: The maximum distance between a cell and an ending cell (a vat of food) is at most 2*n.
+
+//Algorithm: We will compute a 2D prefix sum array. dp[i][j] will store the #of cows that reach cell (i, j). Then in addition, we'll maintain a variable that will compute the totalcost of all the cows eating their food. We can update these values in O(n^2) time initially.
+//Algorithm: To handle each query, we'll iterate over all the cells that the query cell travels to and remove all the cows that would have gone there if the signpost at the query cell hadn't been changed. Then iterate over all the cells tha tthe query cell will now travel to and add all the cows that wouldn't have gone there if the signpost at the query cell hadn't been changed. It's trivial to update the cost by running this algorithm.
+
+void solve(ll ca)
+{
+    ll n, q;
+    cin >> n;
+    
+    ll grid[n+1][n+1];
+    ll totalcost = 0; //Maintains the current total cost
+    
+    for (ll i = 0; i < n; i++) {
+        for (ll j = 0; j < n; j++) {
+            char c; cin >> c;
+            if (c == 'R') {
+                grid[i][j] = -1;
+            } else {
+                grid[i][j] = -2;
+            }
+        }
+        cin >> grid[i][n];
+    }
+    
+    for (ll j = 0; j < n; j++) {
+        cin >> grid[n][j];
+    }
+        
+    ll dp[n+1][n+1]; //dp2[i][j] is the total #of cows who pass through cell i, j
+    
+    //Intialize the dp array
+    for (ll i = 0; i <= n; i++) {
+        for (ll j = 0; j <= n; j++) {
+            dp[i][j] = 1;
+        }
+    }
+    
+    //No cows currently are in any of the vats
+    for (ll i = 0; i < n; i++) {
+        dp[i][n] = 0;
+    }
+    for (ll j = 0; j < n; j++) {
+        dp[n][j] = 0;
+    }
+    
+    //Compute the 2D prefix sum array
+    for (ll i = 0; i <= n; i++) {
+        for (ll j = 0; j <= n; j++) {
+            if (i > 0 && grid[i-1][j] == -2) {
+                dp[i][j] += dp[i-1][j];
+            }
+            if (j > 0 && grid[i][j-1] == -1) {
+                dp[i][j] += dp[i][j-1];
+            }
+        }
+    }
+    
+    //Compute the initial total cost
+    for (ll i = 0; i < n; i++) {
+        totalcost += (dp[i][n]*grid[i][n]);
+    }
+    for (ll j = 0; j < n; j++) {
+        totalcost += (dp[n][j]*grid[n][j]);
+    }
+    
+    cin >> q;
+    
+    //Print the total cost at the beginning
+    cout << totalcost << endl;
+    
+    while (q--) {
+        ll oi, oj;
+        cin >> oi >> oj;
+        oi--; oj--;
+        
+        //Update all the cells
+        ll i = oi; ll j = oj;
+        while (i != n && j != n) {
+            if (grid[i][j] == -1) {
+                dp[i][j+1] -= dp[oi][oj];
+                j++;
+            } else {
+                dp[i+1][j] -= dp[oi][oj];
+                i++;
+            }
+        }
+        
+        //Update the cost
+        totalcost -= (grid[i][j]*dp[oi][oj]);
+        
+        //Switch the sign post
+        if (grid[oi][oj] == -1) {
+            grid[oi][oj] = -2;
+        } else {
+            grid[oi][oj] = -1;
+        }
+        
+        //Update all the cells
+        i = oi; j = oj;
+        while (i != n && j != n) {
+            if (grid[i][j] == -1) {
+                dp[i][j+1] += dp[oi][oj];
+                j++;
+            } else {
+                dp[i+1][j] += dp[oi][oj];
+                i++;
+            }
+        }
+        
+        //Update the answer
+        totalcost += (grid[i][j]*dp[oi][oj]);
+        cout << totalcost << endl;
+    }
+    
+    return;
+}
+
+int main()
+{
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    ll t = 1;
+    //cin >> t;
+
+    ll co = 1;
+    while (t--) {
+        solve(co);
+        ++co;
+    }
+}
